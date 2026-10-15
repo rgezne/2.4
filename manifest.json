@@ -1,0 +1,177 @@
+{
+  "name": "gopeed-extension-pikpak",
+  "author": "TeamBreakerr",
+  "title": "PikPak 分享下载",
+  "description": "解析 PikPak 分享链接；支持指定文件/文件夹路径；文件夹可按批解析（每批独立缓存、自动推进），慢网络下也能稳定拿到多个文件的直链",
+  "icon": "",
+  "version": "1.7.1",
+  "homepage": "https://github.com/TeamBreakerr/gopeed-extension-pikpak",
+  "repository": {
+    "url": "https://github.com/TeamBreakerr/gopeed-extension-pikpak"
+  },
+  "scripts": [
+    {
+      "event": "onResolve",
+      "match": {
+        "urls": [
+          "*://mypikpak.com/s/*",
+          "*://*.mypikpak.com/s/*",
+          "*://mypikpak.net/s/*",
+          "*://*.mypikpak.net/s/*"
+        ]
+      },
+      "entry": "index.js"
+    }
+  ],
+  "settings": [
+    {
+      "name": "api_host",
+      "title": "API 域名",
+      "description": "默认 .com（多数代理规则集只覆盖 mypikpak.com，命中率更高）",
+      "type": "string",
+      "value": "api-drive.mypikpak.com",
+      "options": [
+        {
+          "label": "api-drive.mypikpak.com",
+          "value": "api-drive.mypikpak.com"
+        },
+        {
+          "label": "api-drive.mypikpak.net",
+          "value": "api-drive.mypikpak.net"
+        }
+      ]
+    },
+    {
+      "name": "user_host",
+      "title": "Captcha 域名",
+      "description": "用于 captcha/init 的 user 域名",
+      "type": "string",
+      "value": "user.mypikpak.com",
+      "options": [
+        {
+          "label": "user.mypikpak.com",
+          "value": "user.mypikpak.com"
+        },
+        {
+          "label": "user.mypikpak.net",
+          "value": "user.mypikpak.net"
+        }
+      ]
+    },
+    {
+      "name": "use_transcoding",
+      "title": "使用转码地址",
+      "description": "对视频文件优先使用转码地址（清晰度较低但更稳定），否则使用原始下载链接",
+      "type": "string",
+      "value": "0",
+      "options": [
+        {
+          "label": "关闭（原始链接）",
+          "value": "0"
+        },
+        {
+          "label": "开启（转码链接）",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "share_pwd",
+      "title": "分享密码",
+      "description": "分享需要密码时填写，否则**务必留空**：填了会让插件多走一步换取 pass_code_token，错误的密码还可能导致列表被削减",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "name": "target_path",
+      "title": "目标路径（可选）",
+      "description": "可填写具体文件或文件夹路径。指向文件时只解析该文件；指向文件夹时递归解析该文件夹及所有嵌套子目录，并交给 Gopeed 原生文件树选择。支持从分享根目录或链接所在目录开始，例如 DyDy_cos/update/26.09 patreon 或 DyDy_cos/update/26.09 patreon/ALL IN_S.mp4。留空则扫描整个分享。",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "name": "bulk_restore",
+      "title": "大文件夹加速（自动/始终/关闭）",
+      "description": "文件夹里文件多时（Gopeed v1.9.x 解析超时仅 60 秒，且其运行时并发不生效），逐文件取链接必然超时。开启后改为：先在自己网盘里找这份目录（找不到就整目录转存一次），然后直接遍历网盘目录拿全部直链——请求数只和目录层级有关，与文件数无关。代价：会把该文件夹内所有文件（含视频）转存到你网盘，占用空间和每日转存次数。自动 = 先测速，预计会超时才切换（推荐）；始终开启 = 直接走最快路径（顽固超时时选它）。",
+      "type": "string",
+      "value": "auto",
+      "options": [
+        {
+          "label": "自动（推荐，预计超时才切换）",
+          "value": "auto"
+        },
+        {
+          "label": "始终开启（最快，跳过分享目录遍历）",
+          "value": "1"
+        },
+        {
+          "label": "关闭（完全不转存，只用分享直链）",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "name": "batch_size",
+      "title": "分批解析（慢网络/多文件必开）",
+      "description": "Gopeed v1.9.x 的解析超时只有 60 秒，而 PikPak 每个文件都要单独请求一次；文件多时一次解析完会超时。开启后每次确认只解析一批（默认 10 个），成功后自动记住进度，再点确认就解析下一批，直到整个文件夹加完。每批的结果名会显示「批次 x/y」。填 0 关闭。",
+      "type": "string",
+      "value": "0",
+      "options": [
+        {
+          "label": "关闭（一次解析全部）",
+          "value": "0"
+        },
+        {
+          "label": "每批 5 个",
+          "value": "5"
+        },
+        {
+          "label": "每批 10 个（推荐）",
+          "value": "10"
+        },
+        {
+          "label": "每批 20 个",
+          "value": "20"
+        }
+      ]
+    },
+    {
+      "name": "debug_info",
+      "title": "调试信息（排查用）",
+      "description": "打开后，解析出的任务名会附带诊断信息，例如〔密码token=有｜列表:无token=1,带token=4〕：前者说明分享密码是否换到了 token，后者是每种列表参数各返回了几个文件。用于定位\"分享里文件很多、插件只解析出几个\"这类问题。平时保持关闭。",
+      "type": "string",
+      "value": "0",
+      "options": [
+        {
+          "label": "关闭（默认）",
+          "value": "0"
+        },
+        {
+          "label": "开启（结果名显示诊断信息）",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "username",
+      "title": "PikPak 账号",
+      "description": "邮箱/手机号/用户名。匿名只能下载视频，zip 等其他文件需要登录",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "name": "password",
+      "title": "PikPak 密码",
+      "description": "与账号配合使用；登录态会缓存，过期自动刷新",
+      "type": "string",
+      "value": ""
+    },
+    {
+      "name": "refresh_token",
+      "title": "refresh_token（可选）",
+      "description": "账号密码登录被要求人机验证时，改填网页端的 refresh_token（见 README）",
+      "type": "string",
+      "value": ""
+    }
+  ]
+}
